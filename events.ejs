@@ -1,0 +1,17 @@
+<% events.forEach(function(event){%>
+  <% if (event.event=="CreateBackerTokens" && event.address==config.contract_ethereumdollar_addr && event.args.value.toNumber()>0){ %>
+    <p><%= event.args.account.substring(0,12) %>... <span class="label label-success">created</span> <%= bundle.utility.weiToEth(event.args.tokens) %> BKR from <%= bundle.utility.weiToEth(event.args.value) %> ETH <a href="<%= event.tx_link %>" target="_blank"><i class="fa fa-external-link" aria-hidden="true"></i></a></p>
+  <% } else if (event.event=="CreateDollarTokens" && event.address==config.contract_ethereumdollar_addr && event.args.value.toNumber()>0){ %>
+    <p><%= event.args.account.substring(0,12) %>... <span class="label label-success">created</span> <%= bundle.utility.weiToEth(event.args.tokens) %> EUSD from <%= bundle.utility.weiToEth(event.args.value) %> ETH <a href="<%= event.tx_link %>" target="_blank"><i class="fa fa-external-link" aria-hidden="true"></i></a></p>
+  <% } else if (event.event=="RedeemBackerTokens" && event.address==config.contract_ethereumdollar_addr && event.args.value.toNumber()>0){ %>
+    <p><%= event.args.account.substring(0,12) %>... <span class="label label-warning">redeemed</span> <%= bundle.utility.weiToEth(event.args.tokens) %> BKR into <%= bundle.utility.weiToEth(event.args.value) %> ETH <a href="<%= event.tx_link %>" target="_blank"><i class="fa fa-external-link" aria-hidden="true"></i></a></p>
+  <% } else if (event.event=="RedeemDollarTokens" && event.address==config.contract_ethereumdollar_addr && event.args.value.toNumber()>0){ %>
+    <p><%= event.args.account.substring(0,12) %>... <span class="label label-warning">redeemed</span> <%= bundle.utility.weiToEth(event.args.tokens) %> EUSD into <%= bundle.utility.weiToEth(event.args.value) %> ETH <a href="<%= event.tx_link %>" target="_blank"><i class="fa fa-external-link" aria-hidden="true"></i></a></p>
+  <% } else if (event.event=="UpdateExchangeRate" && event.address==config.contract_ethereumdollar_addr){ %>
+    <p>The <span class="label label-info">exchange rate</span> was updated to <%= bundle.utility.weiToEth(event.args.rate) %> ETH/USD <a href="<%= event.tx_link %>" target="_blank"><i class="fa fa-external-link" aria-hidden="true"></i></a></p>
+  <% } else if (event.event=="Transfer" && event.address==config.contract_backertoken_addr && event.args._value.toNumber()>0 ){ %>
+    <p><%= event.args._from.substring(0,12) %>... <span class="label label-default">sent</span> <%= bundle.utility.weiToEth(event.args._value) %> BKR to <%= event.args._to.substring(0,12) %>... <a href="<%= event.tx_link %>" target="_blank"><i class="fa fa-external-link" aria-hidden="true"></i></a></p>
+  <% } else if (event.event=="Transfer" && event.address==config.contract_dollartoken_addr && event.args._value.toNumber()>0 ){ %>
+    <p><%= event.args._from.substring(0,12) %>... <span class="label label-default">sent</span> <%= bundle.utility.weiToEth(event.args._value) %> EUSD to <%= event.args._to.substring(0,12) %>... <a href="<%= event.tx_link %>" target="_blank"><i class="fa fa-external-link" aria-hidden="true"></i></a></p>
+  <% } %>
+<%});%>

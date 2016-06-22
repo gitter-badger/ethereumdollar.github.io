@@ -1,0 +1,39 @@
+<h3>Token Supply / Price</h3>
+
+<table class="table">
+  <tr>
+    <th></th>
+    <th>Supply (Tokens)</th>
+    <th>Supply (ETH)</th>
+    <th>Supply (USD)</th>
+    <th>Price</th>
+  </tr>
+  <tr>
+    <td>Backer Token</td>
+    <td><%= bundle.utility.weiToEth(backer_supply) %> BKR</td>
+    <td><%= (bundle.utility.weiToEth(backer_supply) * bundle.utility.weiToEth(backer_rate)).toFixed(3) %> ETH</td>
+    <td><%= (bundle.utility.weiToEth(backer_supply) * bundle.utility.weiToEth(backer_rate) * bundle.utility.weiToEth(exchange_rate)).toFixed(3) %> USD</td>
+    <td><%= bundle.utility.weiToEth(backer_rate) %> BKR/ETH</td>
+  </tr>
+  <tr>
+    <td>Dollar Token</td>
+    <td><%= bundle.utility.weiToEth(dollar_supply) %> EUSD</td>
+    <td><%= (bundle.utility.weiToEth(dollar_supply) / bundle.utility.weiToEth(exchange_rate)).toFixed(3) %> ETH</td>
+    <td><%= bundle.utility.weiToEth(dollar_supply) %> USD</td>
+    <td><%= bundle.utility.weiToEth(exchange_rate) %> ETH/EUSD</td>
+  </tr>
+  <tr>
+    <td>Ether Balance</td>
+    <td><%= bundle.utility.weiToEth(balance) %> ETH</td>
+    <td><%= bundle.utility.weiToEth(balance) %> ETH</td>
+    <td><%= (bundle.utility.weiToEth(balance) * bundle.utility.weiToEth(exchange_rate)).toFixed(3) %> USD</td>
+    <td><%= bundle.utility.weiToEth(exchange_rate) %> ETH/USD</td>
+  </tr>
+  <tr>
+    <td></td>
+    <td></td>
+    <td><strong>Solvency</strong></td>
+    <td><%= bundle.utility.weiToEth(solvency) %></td>
+    <td><button type="submit" class="btn btn-primary" id="update_exchange_rate">Update Exchange Rate</button></td>
+  </tr>
+</table>
