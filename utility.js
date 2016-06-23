@@ -849,6 +849,7 @@ exports.sign = sign;
 exports.verify = verify;
 exports.createAddress = createAddress;
 exports.verifyPrivateKey = verifyPrivateKey;
+exports.toChecksumAddress = toChecksumAddress;
 exports.readFile = readFile;
 exports.writeFile = writeFile;
 exports.roundTo = roundTo;

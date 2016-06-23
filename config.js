@@ -1,7 +1,7 @@
 var config = {};
 
 config.home_url = 'https://ethereumdollar.github.io';
-config.home_url = 'http://localhost:8080';
+// config.home_url = 'http://localhost:8080';
 config.contract_ethereumdollar = 'ethereumdollar.sol';
 config.contract_token = 'reservetoken.sol';
 config.contract_ethereumdollar_addr = '0xf076ae262f62f07a9404c283a7ab2eb345ec760d';
