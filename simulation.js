@@ -4,33 +4,24 @@ var gaussian = require('gaussian');
 
 //contract
 
-var backer_accounts = [];
-var backer_supply = 0;
-var dollar_accounts = [];
-var dollar_supply = 0;
-var exchange_rate = 10;
+var backerAccounts = [];
+var backerSupply = 0;
+var dollarAccounts = [];
+var dollarSupply = 0;
+var exchangeRate = 10;
 var balance = 0;
-var solvency_to_create_dollar_tokens = 1.3;
-var solvency_to_redeem_backer_tokens = 1.0;
-var fee_percentage = 0.01;
+var solvencyToCreateDollarTokens = 1.3;
+var solvencyToRedeemBackerTokens = 1.0;
+var feePercentage = 0.01;
 var fees = 0;
+var saviorMode = false;
 
-function reset_accounts() {
-  backer_accounts = [0];
-  backer_supply = 0;
-  dollar_accounts = [0];
-  dollar_supply = 0;
-  exchange_rate = 10;
-  balance = 0;
-  fees = 0;
-}
-
-function backer_rate() {
-  if (backer_supply>0) {
+function backerRate() {
+  if (backerSupply>0) {
     if (solvency(0,0,0)>=1.0) {
-      return (balance - dollar_supply / exchange_rate) / backer_supply;
+      return (balance - dollarSupply / exchangeRate) / backerSupply;
     } else {
-      return 0.000001;
+      return 0.0;
     }
   } else {
     return 1.0;
@@ -40,94 +31,100 @@ function backer_rate() {
 function solvency(create_dollar_tokens, redeem_backer_tokens, redeem_dollar_tokens) {
   var rate = 0;
   if (redeem_backer_tokens != 0) {
-    rate = backer_rate();
+    rate = backerRate();
   }
-  var balance_usd = (balance - redeem_backer_tokens * rate + create_dollar_tokens) * exchange_rate - redeem_dollar_tokens;
-  var dollar_supply_usd = dollar_supply + create_dollar_tokens * exchange_rate - redeem_dollar_tokens;
-  if (dollar_supply_usd>0) {
-    return balance_usd / dollar_supply_usd;
+  var balance_usd = (balance - redeem_backer_tokens * rate + create_dollar_tokens) * exchangeRate - redeem_dollar_tokens;
+  var dollarSupply_usd = dollarSupply + create_dollar_tokens * exchangeRate - redeem_dollar_tokens;
+  if (dollarSupply_usd>0) {
+    return balance_usd / dollarSupply_usd;
   } else {
     return 1.0;
   }
 }
 
 function create_backer_tokens(amount, account) {
-  if (amount>0) {
-    if (typeof(account)=='undefined') {
-      account = backer_accounts.length;
-      backer_accounts[account] = 0;
+  if (amount<=0) return;
+  if (typeof(account)=='undefined') {
+    account = backerAccounts.length;
+    backerAccounts[account] = 0;
+  }
+  var rate = backerRate();
+  if (rate<=0) { //insolvent
+    if (!saviorMode) {
+      saviorMode = true;
+      backerAccounts = {};
+      backerSupply = 0;
     }
-    var rate = backer_rate();
-    fees += amount * fee_percentage;
-    backer_accounts[account] += (amount * (1 - fee_percentage)) / rate;
-    backer_supply += (amount * (1 - fee_percentage)) / rate;
+    fees += amount * feePercentage;
+    backerAccounts[account] += (amount * (1 - feePercentage)) / rate;
+    backerSupply += (amount * (1 - feePercentage)) / rate;
+    dollarAccounts[account] += (amount * (1 - feePercentage)) * exchangeRate;
+    dollarSupply += (amount * (1 - feePercentage)) * exchangeRate;
     balance += amount;
   } else {
-    //throw
+    saviorMode = false;
+    fees += amount * feePercentage;
+    backerAccounts[account] += (amount * (1 - feePercentage)) / rate;
+    backerSupply += (amount * (1 - feePercentage)) / rate;
+    balance += amount;
   }
 }
 
 function create_dollar_tokens(amount, account) {
-  if (amount>0 && solvency(amount,0,0)>solvency_to_create_dollar_tokens) {
-    if (typeof(account)=='undefined') {
-      account = dollar_accounts.length;
-      dollar_accounts[account] = 0;
-    }
-    fees += amount * fee_percentage;
-    dollar_accounts[account] += (amount * (1 - fee_percentage)) * exchange_rate;
-    dollar_supply += (amount * (1 - fee_percentage)) * exchange_rate;
-    balance += amount;
-  } else {
-    //throw
+  if (amount<=0 || solvency(amount,0,0)<solvencyToCreateDollarTokens) return;
+  if (typeof(account)=='undefined') {
+    account = dollarAccounts.length;
+    dollarAccounts[account] = 0;
   }
+  saviorMode = false;
+  fees += amount * feePercentage;
+  dollarAccounts[account] += (amount * (1 - feePercentage)) * exchangeRate;
+  dollarSupply += (amount * (1 - feePercentage)) * exchangeRate;
+  balance += amount;
 }
 
 function redeem_backer_tokens(amount, account) {
-  var rate = backer_rate();
-  if (amount>0 && amount<=backer_accounts[account] && solvency(0,amount,0)>solvency_to_redeem_backer_tokens) {
-    backer_accounts[account] -= amount;
-    backer_supply -= amount;
-    fees += (amount * fee_percentage) * rate;
-    balance -= (amount * (1 - fee_percentage)) * rate;
-    //send account (amount*(1-fee_percentage))*rate ether
-  } else {
-    //throw
-  }
+  if (amount<=0 || amount>backerAccounts[account] || solvency(0,amount,0)<solvencyToRedeemBackerTokens) return;
+  saviorMode = false;
+  var rate = backerRate();
+  backerAccounts[account] -= amount;
+  backerSupply -= amount;
+  fees += (amount * feePercentage) * rate;
+  balance -= (amount * (1 - feePercentage)) * rate;
+  //send account (amount*(1-feePercentage))*rate ether
 }
 
 function redeem_dollar_tokens(amount, account) {
-  if (amount>0 && amount<=dollar_accounts[account] && solvency(0,0,amount)>1.0) {
-    dollar_accounts[account] -= amount;
-    dollar_supply -= amount;
-    fees += (amount * fee_percentage) / exchange_rate;
-    balance -= (amount * (1 - fee_percentage)) / exchange_rate;
-    //send account (amount*(1-fee_percentage))/exchange_rate ether
-  } else {
-    //throw
-  }
+  if (amount<=0 || amount>dollarAccounts[account] || solvency(0,0,amount)<1.0) return;
+  saviorMode = false;
+  dollarAccounts[account] -= amount;
+  dollarSupply -= amount;
+  fees += (amount * feePercentage) / exchangeRate;
+  balance -= (amount * (1 - feePercentage)) / exchangeRate;
+  //send account (amount*(1-feePercentage))/exchangeRate ether
 }
 
-function update_exchange_rate(rate) {
-  exchange_rate = rate;
+function update_exchangeRate(rate) {
+  exchangeRate = rate;
 }
 
 function print_status() {
   console.log('Backer token accounts');
-  var rate = backer_rate();
-  for (var i=0; i<backer_accounts.length; i++) {
-    console.log(i+': '+backer_accounts[i]+' tokens, '+backer_accounts[i]*rate+' ETH, '+backer_accounts[i]*rate*exchange_rate+' USD')
+  var rate = backerRate();
+  for (var i=0; i<backerAccounts.length; i++) {
+    console.log(i+': '+backerAccounts[i]+' tokens, '+backerAccounts[i]*rate+' ETH, '+backerAccounts[i]*rate*exchangeRate+' USD')
   }
   console.log('------');
   console.log('Dollar token accounts');
-  for (var i=0; i<dollar_accounts.length; i++) {
-    console.log(i+': '+dollar_accounts[i]+' tokens, '+dollar_accounts[i]/exchange_rate+' ETH, '+dollar_accounts[i]+' USD')
+  for (var i=0; i<dollarAccounts.length; i++) {
+    console.log(i+': '+dollarAccounts[i]+' tokens, '+dollarAccounts[i]/exchangeRate+' ETH, '+dollarAccounts[i]+' USD')
   }
   console.log('------');
-  console.log('Backer token supply: '+backer_supply+' backer tokens, '+backer_supply*rate+' ETH, '+backer_supply*rate*exchange_rate+' USD');
-  console.log('Dollar token supply: '+dollar_supply+' dollar tokens, '+dollar_supply/exchange_rate+' ETH, '+dollar_supply+' USD');
-  console.log('Balance: '+balance+' ETH, '+balance*exchange_rate+' USD');
-  console.log('Exchange rate: '+exchange_rate+' ETH/USD');
-  console.log('Backer rate: '+backer_rate()+' token/ETH');
+  console.log('Backer token supply: '+backerSupply+' backer tokens, '+backerSupply*rate+' ETH, '+backerSupply*rate*exchangeRate+' USD');
+  console.log('Dollar token supply: '+dollarSupply+' dollar tokens, '+dollarSupply/exchangeRate+' ETH, '+dollarSupply+' USD');
+  console.log('Balance: '+balance+' ETH, '+balance*exchangeRate+' USD');
+  console.log('Exchange rate: '+exchangeRate+' ETH/USD');
+  console.log('Backer rate: '+backerRate()+' token/ETH');
   console.log('Solvency: '+(solvency(0,0,0)));
   console.log('Fees: '+fees);
   console.log('------');
@@ -184,23 +181,11 @@ async.whilst(
     for (var i=0; i<prices.length; i++) {
       var backer_creation = gaussian(backer_creation_mean, Math.pow(backer_creation_sigma,2)).ppf(Math.random());
       var dollar_creation = gaussian(dollar_creation_mean, Math.pow(dollar_creation_sigma,2)).ppf(Math.random());
-      update_exchange_rate(prices[i]);
+      update_exchangeRate(prices[i]);
       if (backer_creation>0) create_backer_tokens(backer_creation);
       if (dollar_creation>0) create_dollar_tokens(dollar_creation);
       if (!solvency(0,0,0)>1.0) console.log('Not solvent');
     }
-    print_status();
-
-    //creation and redemption test
-    reset_accounts();
-    create_backer_tokens(1000);
-    create_backer_tokens(1000);
-    create_dollar_tokens(500);
-    create_dollar_tokens(500);
-    update_exchange_rate(20);
-    print_status();
-    redeem_backer_tokens(500,1);
-    redeem_dollar_tokens(2500,1);
     print_status();
   }
 );

@@ -1,17 +1,17 @@
 var config = {};
 
-config.home_url = 'https://ethereumdollar.github.io';
-// config.home_url = 'http://localhost:8080';
-config.contract_ethereumdollar = 'ethereumdollar.sol';
-config.contract_token = 'reservetoken.sol';
-config.contract_ethereumdollar_addr = '0xf076ae262f62f07a9404c283a7ab2eb345ec760d';
-config.contract_backertoken_addr = '0x24f49cf37b697636c86c7d911c9b5f67038ed89f';
-config.contract_dollartoken_addr = '0x81694b0c5b2a88b5ff3d6368eaa5d94f9ab9cb6e';
-config.eth_testnet = true;
-config.eth_provider = 'http://localhost:8545';
-config.eth_gas_price = 20000000000;
-config.eth_addr = '0x0000000000000000000000000000000000000000';
-config.eth_addr_pk = '';
+config.homeURL = 'https://ethereumdollar.github.io';
+config.homeURL = 'http://localhost:8080';
+config.contractEthereumDollar = 'ethereumdollar.sol';
+config.contractToken = 'reservetoken.sol';
+config.contractEthereumDollarAddr = '0xfe30c2b02319aa68a44975eec1b69933f4ac6592';
+config.contractBackerTokenAddr = '0xf0c3d5c1a8f181f365d906447b67ea6510a8ac93';
+config.contractDollarTokenAddr = '0xedbaad5f8053f17a4a2ad829fd12c5d1332c9f1a';
+config.ethTestnet = true;
+config.ethProvider = 'http://localhost:8545';
+config.ethGasPrice = 20000000000;
+config.ethAddr = '0x0000000000000000000000000000000000000000';
+config.ethAddrPrivateKey = '';
 
 try {
   global.config = config;

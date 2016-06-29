@@ -1,5 +1,5 @@
 var Web3 = require('web3');
-var utility = require('./utility.js');
+var utility = require('./common/utility.js');
 var request = require('request');
 var sha256 = require('js-sha256').sha256;
 require('datejs');
@@ -11,11 +11,11 @@ Main.alertInfo = function(message) {
   $('#notifications').prepend($('<p>' + message + '</p>').hide().fadeIn(2000));
   console.log(message);
 }
-Main.alertTxHash = function(txHash) {
-  if (txHash) {
-    Main.alertInfo('You just created an Ethereum transaction. Track its progress here: <a href="http://'+(config.eth_testnet ? 'testnet.' : '')+'etherscan.io/tx/'+txHash+'" target="_blank">'+txHash+'</a>.');
+Main.alertTxResult = function(err, result) {
+  if (result.txHash) {
+    Main.alertInfo('You just created an Ethereum transaction. Track its progress here: <a href="http://'+(config.ethTestnet ? 'testnet.' : '')+'etherscan.io/tx/'+result.txHash+'" target="_blank">'+result.txHash+'</a>.');
   } else {
-    Main.alertInfo('You tried to send an Ethereum transaction but there was an error. Check the Javascript console for details.');
+    Main.alertInfo('You tried to send an Ethereum transaction but there was an error: '+err);
   }
 }
 Main.createCookie = function(name,value,days) {
@@ -53,58 +53,50 @@ Main.eraseCookie = function(name) {
   }
 }
 Main.logout = function() {
-  addrs = [config.eth_addr];
-  pks = [config.eth_addr_pk];
-  selectedAddr = 0;
+  addrs = [config.ethAddr];
+  pks = [config.ethAddrPrivateKey];
+  selectedAccount = 0;
   nonce = undefined;
-  market_makers = {};
-  browser_orders = [];
   Main.refresh();
 }
-Main.createAddress = function() {
-  var newAddress = utility.createAddress();
-  var addr = newAddress[0];
-  var pk = newAddress[1];
-  Main.addAddress(addr, pk);
-  Main.alertInfo('You just created an Ethereum address: '+addr+'.');
+Main.createAccount = function() {
+  var newAccount = utility.createAccount();
+  var addr = newAccount.address;
+  var pk = newAccount.privateKey;
+  Main.addAccount(addr, pk);
+  Main.alertInfo('You just created an Ethereum account: '+addr+'.');
 }
-Main.deleteAddress = function() {
-  addrs.splice(selectedAddr, 1);
-  pks.splice(selectedAddr, 1);
-  selectedAddr = 0;
+Main.deleteAccount = function() {
+  addrs.splice(selectedAccount, 1);
+  pks.splice(selectedAccount, 1);
+  selectedAccount = 0;
   nonce = undefined;
-  market_makers = {};
-  browser_orders = [];
   Main.refresh();
 }
-Main.selectAddress = function(i) {
-  selectedAddr = i;
+Main.selectAccount = function(i) {
+  selectedAccount = i;
   nonce = undefined;
-  market_makers = {};
-  browser_orders = [];
   Main.refresh();
 }
-Main.addAddress = function(addr, pk) {
+Main.addAccount = function(addr, pk) {
   if (addr.slice(0,2)!='0x') addr = '0x'+addr;
   if (pk.slice(0,2)=='0x') pk = pk.slice(2);
   addr = utility.toChecksumAddress(addr);
   if (pk!=undefined && pk!='' && !utility.verifyPrivateKey(addr, pk)) {
     Main.alertInfo('For account '+addr+', the private key is invalid.');
   } else if (!web3.isAddress(addr)) {
-    Main.alertInfo('The specified address, '+addr+', is invalid.');
+    Main.alertInfo('The specified account, '+addr+', is invalid.');
   } else {
     addrs.push(addr);
     pks.push(pk);
-    selectedAddr = addrs.length-1;
+    selectedAccount = addrs.length-1;
     nonce = undefined;
-    market_makers = {};
-    browser_orders = [];
     Main.refresh();
   }
 }
 Main.showPrivateKey = function() {
-  var addr = addrs[selectedAddr];
-  var pk = pks[selectedAddr];
+  var addr = addrs[selectedAccount];
+  var pk = pks[selectedAccount];
   if (pk==undefined || pk=='') {
     Main.alertInfo('For account '+addr+', there is no private key available. You can still transact if you are connected to Geth and the account is unlocked.');
   } else {
@@ -112,106 +104,106 @@ Main.showPrivateKey = function() {
   }
 }
 Main.addressLink = function(address) {
-  return 'http://'+(config.eth_testnet ? 'testnet.' : '')+'etherscan.io/address/'+address;
+  return 'http://'+(config.ethTestnet ? 'testnet.' : '')+'etherscan.io/address/'+address;
 }
 Main.connectionTest = function() {
   if (connection) return connection;
-  connection = {connection: 'Proxy', provider: 'http://'+(config.eth_testnet ? 'testnet.' : '')+'etherscan.io', testnet: config.eth_testnet};
+  connection = {connection: 'Proxy', provider: 'http://'+(config.ethTestnet ? 'testnet.' : '')+'etherscan.io', testnet: config.ethTestnet};
   try {
     if (web3.currentProvider) {
       web3.eth.getBalance('0x0000000000000000000000000000000000000000');
-      connection = {connection: 'Geth', provider: config.eth_provider, testnet: config.eth_testnet};
+      connection = {connection: 'Geth', provider: config.ethProvider, testnet: config.ethTestnet};
     }
   } catch(err) {
     web3.setProvider(undefined);
   }
-  new EJS({url: config.home_url+'/'+'connection_description.ejs'}).update('connection', {connection: connection});
+  new EJS({url: config.homeURL+'/'+'connection_description.ejs'}).update('connection', {connection: connection});
   return connection;
 }
-Main.loadAddresses = function(callback) {
+Main.loadAccounts = function(callback) {
   if (Main.connectionTest().connection=='Geth') {
     $('#pk_div').hide();
   }
   if (addrs.length<=0 || addrs.length!=pks.length) {
-    addrs = [config.eth_addr];
-    pks = [config.eth_addr_pk];
-    selectedAddr = 0;
+    addrs = [config.ethAddr];
+    pks = [config.ethAddrPrivateKey];
+    selectedAccount = 0;
   }
   async.map(addrs,
     function(addr, callback) {
-      utility.getBalance(web3, addr, function(balance) {
+      utility.getBalance(web3, addr, function(err, balance) {
         callback(null, {addr: addr, balance: balance});
       });
     },
     function(err, addresses) {
-      new EJS({url: config.home_url+'/'+'addresses.ejs'}).update('addresses', {addresses: addresses, selectedAddr: selectedAddr});
+      new EJS({url: config.homeURL+'/'+'addresses.ejs'}).update('addresses', {addresses: addresses, selectedAccount: selectedAccount});
       callback();
     }
   );
 }
 Main.createBackerTokens = function(amount) {
   amount = utility.ethToWei(amount);
-  utility.send(web3, contract_ethereumdollar, config.contract_ethereumdollar_addr, 'createBackerTokens', [{gas: 150000, value: amount}], addrs[selectedAddr], pks[selectedAddr], nonce, function(result) {
-    txHash = result[0];
-    nonce = result[1];
-    Main.alertTxHash(txHash);
+  utility.send(web3, contractEthereumDollar, config.contractEthereumDollarAddr, 'createBackerTokens', [{gas: 150000, value: amount}], addrs[selectedAccount], pks[selectedAccount], nonce, function(err,result) {
+    txHash = result.txHash;
+    nonce = result.nonce;
+    Main.alertTxResult(err, result);
   });
 }
 Main.createDollarTokens = function(amount) {
   amount = utility.ethToWei(amount);
-  utility.send(web3, contract_ethereumdollar, config.contract_ethereumdollar_addr, 'createDollarTokens', [{gas: 150000, value: amount}], addrs[selectedAddr], pks[selectedAddr], nonce, function(result) {
-    txHash = result[0];
-    nonce = result[1];
-    Main.alertTxHash(txHash);
+  utility.send(web3, contractEthereumDollar, config.contractEthereumDollarAddr, 'createDollarTokens', [{gas: 150000, value: amount}], addrs[selectedAccount], pks[selectedAccount], nonce, function(err,result) {
+    txHash = result.txHash;
+    nonce = result.nonce;
+    Main.alertTxResult(err, result);
   });
 }
 Main.redeemBackerTokens = function(amount) {
   amount = utility.ethToWei(amount);
-  utility.send(web3, contract_ethereumdollar, config.contract_ethereumdollar_addr, 'redeemBackerTokens', [amount, {gas: 150000, value: 0}], addrs[selectedAddr], pks[selectedAddr], nonce, function(result) {
-    txHash = result[0];
-    nonce = result[1];
-    Main.alertTxHash(txHash);
+  utility.send(web3, contractEthereumDollar, config.contractEthereumDollarAddr, 'redeemBackerTokens', [amount, {gas: 150000, value: 0}], addrs[selectedAccount], pks[selectedAccount], nonce, function(err,result) {
+    txHash = result.txHash;
+    nonce = result.nonce;
+    Main.alertTxResult(err, result);
   });
 }
 Main.redeemDollarTokens = function(amount) {
   amount = utility.ethToWei(amount);
-  utility.send(web3, contract_ethereumdollar, config.contract_ethereumdollar_addr, 'redeemDollarTokens', [amount, {gas: 150000, value: 0}], addrs[selectedAddr], pks[selectedAddr], nonce, function(result) {
-    txHash = result[0];
-    nonce = result[1];
-    Main.alertTxHash(txHash);
+  utility.send(web3, contractEthereumDollar, config.contractEthereumDollarAddr, 'redeemDollarTokens', [amount, {gas: 150000, value: 0}], addrs[selectedAccount], pks[selectedAccount], nonce, function(err,result) {
+    txHash = result.txHash;
+    nonce = result.nonce;
+    Main.alertTxResult(err, result);
   });
 }
 Main.transferBackerTokens = function(address,amount) {
   amount = utility.ethToWei(amount);
-  utility.send(web3, contract_backertoken, config.contract_backertoken_addr, 'transfer', [address, amount, {gas: 150000, value: 0}], addrs[selectedAddr], pks[selectedAddr], nonce, function(result) {
-    txHash = result[0];
-    nonce = result[1];
-    Main.alertTxHash(txHash);
+  utility.send(web3, contractBackerToken, config.contractBackerTokenAddr, 'transfer', [address, amount, {gas: 150000, value: 0}], addrs[selectedAccount], pks[selectedAccount], nonce, function(err,result) {
+    txHash = result.txHash;
+    nonce = result.nonce;
+    Main.alertTxResult(err, result);
   });
 }
 Main.transferDollarTokens = function(address,amount) {
   amount = utility.ethToWei(amount);
-  utility.send(web3, contract_dollartoken, config.contract_dollartoken_addr, 'transfer', [address, amount, {gas: 150000, value: 0}], addrs[selectedAddr], pks[selectedAddr], nonce, function(result) {
-    txHash = result[0];
-    nonce = result[1];
-    Main.alertTxHash(txHash);
+  utility.send(web3, contractDollarToken, config.contractDollarTokenAddr, 'transfer', [address, amount, {gas: 150000, value: 0}], addrs[selectedAccount], pks[selectedAccount], nonce, function(err,result) {
+    txHash = result.txHash;
+    nonce = result.nonce;
+    Main.alertTxResult(err, result);
   });
 }
 Main.updateExchangeRate = function() {
-  var amount = utility.ethToWei(0.01);
-  utility.send(web3, contract_ethereumdollar, config.contract_ethereumdollar_addr, 'updateExchangeRate', [{gas: 150000, value: amount}], addrs[selectedAddr], pks[selectedAddr], nonce, function(result) {
-    txHash = result[0];
-    nonce = result[1];
-    Main.alertTxHash(txHash);
+  var amount = utility.ethToWei(0.02);
+  utility.send(web3, contractEthereumDollar, config.contractEthereumDollarAddr, 'updateExchangeRate', [{gas: 150000, value: amount}], addrs[selectedAccount], pks[selectedAccount], nonce, function(err,result) {
+    txHash = result.txHash;
+    nonce = result.nonce;
+    Main.alertTxResult(err, result);
   });
 }
 Main.updatePrice = function(callback) {
   $.getJSON('https://poloniex.com/public?command=returnTicker', function(result) {
-    var eth_btc = result.BTC_ETH.last;
+    var ethBTC = result.BTC_ETH.last;
     $.getJSON('https://api.coindesk.com/v1/bpi/currentprice/USD.json', function(result) {
-      var btc_usd = result.bpi.USD.rate;
-      price = Number(eth_btc * btc_usd);
-      price_updated = Date.now();
+      var btcUSD = result.bpi.USD.rate;
+      price = Number(ethBTC * btcUSD);
+      priceUpdated = Date.now();
       callback();
     });
   });
@@ -221,61 +213,61 @@ Main.getPrice = function() {
 }
 Main.loadEvents = function(callback) {
   utility.blockNumber(web3, function(blockNumber) {
-    utility.logs(web3, contract_ethereumdollar, config.contract_ethereumdollar_addr, blockNumber-5760, 'latest', function(event) {
-      event.tx_link = 'http://'+(config.eth_testnet ? 'testnet.' : '')+'etherscan.io/tx/'+event.transactionHash;
-      events_cache[event.transactionHash+event.logIndex] = event;
+    utility.logs(web3, contractEthereumDollar, config.contractEthereumDollarAddr, blockNumber-5760, 'latest', function(err, event) {
+      event.txLink = 'http://'+(config.ethTestnet ? 'testnet.' : '')+'etherscan.io/tx/'+event.transactionHash;
+      eventsCache[event.transactionHash+event.logIndex] = event;
       Main.displayEvents(function(){});
     });
-    utility.logs(web3, contract_backertoken, config.contract_backertoken_addr, blockNumber-5760, 'latest', function(event) {
-      event.tx_link = 'http://'+(config.eth_testnet ? 'testnet.' : '')+'etherscan.io/tx/'+event.transactionHash;
-      events_cache[event.transactionHash+event.logIndex] = event;
+    utility.logs(web3, contractBackerToken, config.contractBackerTokenAddr, blockNumber-5760, 'latest', function(err, event) {
+      event.txLink = 'http://'+(config.ethTestnet ? 'testnet.' : '')+'etherscan.io/tx/'+event.transactionHash;
+      eventsCache[event.transactionHash+event.logIndex] = event;
       Main.displayEvents(function(){});
     });
-    utility.logs(web3, contract_dollartoken, config.contract_dollartoken_addr, blockNumber-5760, 'latest', function(event) {
-      event.tx_link = 'http://'+(config.eth_testnet ? 'testnet.' : '')+'etherscan.io/tx/'+event.transactionHash;
-      events_cache[event.transactionHash+event.logIndex] = event;
+    utility.logs(web3, contractDollarToken, config.contractDollarTokenAddr, blockNumber-5760, 'latest', function(err, event) {
+      event.txLink = 'http://'+(config.ethTestnet ? 'testnet.' : '')+'etherscan.io/tx/'+event.transactionHash;
+      eventsCache[event.transactionHash+event.logIndex] = event;
       Main.displayEvents(function(){});
     });
     callback();
   });
 }
 Main.displayEvents = function(callback) {
-  var events = Object.values(events_cache);
-  events.sort(function(a,b){ return a.blockNumber*1000+a.transactionIndex>b.blockNumber*1000+b.transactionIndex ? -1 : 1 });
-  new EJS({url: config.home_url+'/'+'events.ejs'}).update('events', {events: events, config: config});
+  var events = Object.values(eventsCache);
+  events.sort(function(a,b){ return b.blockNumber-a.blockNumber || b.transactionIndex-a.transactionIndex });
+  new EJS({url: config.homeURL+'/'+'events.ejs'}).update('events', {events: events, config: config});
   callback();
 }
 Main.loadStats = function(callback) {
-  utility.call(web3, contract_backertoken, config.contract_backertoken_addr, 'totalSupply', [], function(result) {
-    var backer_supply = result;
-    utility.call(web3, contract_dollartoken, config.contract_dollartoken_addr, 'totalSupply', [], function(result) {
-      var dollar_supply = result;
-      utility.call(web3, contract_ethereumdollar, config.contract_ethereumdollar_addr, 'exchangeRate', [], function(result) {
-        var exchange_rate = result;
-        utility.call(web3, contract_ethereumdollar, config.contract_ethereumdollar_addr, 'backerRate', [], function(result) {
-          var backer_rate = result;
-          utility.call(web3, contract_ethereumdollar, config.contract_ethereumdollar_addr, 'solvency', [0,0,0], function(result) {
+  utility.call(web3, contractBackerToken, config.contractBackerTokenAddr, 'totalSupply', [], function(err,result) {
+    var backerSupply = result;
+    utility.call(web3, contractDollarToken, config.contractDollarTokenAddr, 'totalSupply', [], function(err,result) {
+      var dollarSupply = result;
+      utility.call(web3, contractEthereumDollar, config.contractEthereumDollarAddr, 'exchangeRate', [], function(err,result) {
+        var exchangeRate = result;
+        utility.call(web3, contractEthereumDollar, config.contractEthereumDollarAddr, 'backerRate', [], function(err,result) {
+          var backerRate = result;
+          utility.call(web3, contractEthereumDollar, config.contractEthereumDollarAddr, 'solvency', [0,0,0], function(err,result) {
             var solvency = result;
-            utility.call(web3, contract_backertoken, config.contract_backertoken_addr, 'balanceOf', [addrs[selectedAddr]], function(result) {
-              var balance_backer = result;
-              utility.call(web3, contract_dollartoken, config.contract_dollartoken_addr, 'balanceOf', [addrs[selectedAddr]], function(result) {
-                var balance_dollar = result;
-                $('#balance_backer').html(utility.weiToEth(balance_backer));
-                $('#balance_dollar').html(utility.weiToEth(balance_dollar));
-                utility.getBalance(web3, config.contract_ethereumdollar_addr, function(balance) {
-                  new EJS({url: config.home_url+'/'+'stats.ejs'}).update('stats', {
-                    backer_supply: backer_supply,
-                    dollar_supply: dollar_supply,
+            utility.call(web3, contractBackerToken, config.contractBackerTokenAddr, 'balanceOf', [addrs[selectedAccount]], function(err,result) {
+              var balanceBacker = result;
+              utility.call(web3, contractDollarToken, config.contractDollarTokenAddr, 'balanceOf', [addrs[selectedAccount]], function(err,result) {
+                var balanceDollar = result;
+                $('#balanceBacker').html(utility.weiToEth(balanceBacker));
+                $('#balanceDollar').html(utility.weiToEth(balanceDollar));
+                utility.getBalance(web3, config.contractEthereumDollarAddr, function(err,balance) {
+                  new EJS({url: config.homeURL+'/'+'stats.ejs'}).update('stats', {
+                    backerSupply: backerSupply,
+                    dollarSupply: dollarSupply,
                     solvency: solvency,
                     balance: balance,
                     ethusd: Main.getPrice(),
-                    exchange_rate: exchange_rate,
-                    backer_rate: backer_rate,
+                    exchangeRate: exchangeRate,
+                    backerRate: backerRate,
                   });
-                  new EJS({url: config.home_url+'/'+'stats_contracts.ejs'}).update('stats_contracts', {
-                    contract_ethereumdollar_addr: config.contract_ethereumdollar_addr,
-                    contract_backertoken_addr: config.contract_backertoken_addr,
-                    contract_dollartoken_addr: config.contract_dollartoken_addr,
+                  new EJS({url: config.homeURL+'/'+'stats_contracts.ejs'}).update('stats_contracts', {
+                    contractEthereumDollarAddr: config.contractEthereumDollarAddr,
+                    contractBackerTokenAddr: config.contractBackerTokenAddr,
+                    contractDollarTokenAddr: config.contractDollarTokenAddr,
                   });
                   callback();
                 });
@@ -288,17 +280,17 @@ Main.loadStats = function(callback) {
   });
 }
 Main.refresh = function() {
-  if (!refreshing || Date.now()-last_refresh>60*1000) {
+  if (!refreshing || Date.now()-lastRefresh>60*1000) {
     refreshing = true;
-    Main.createCookie("user_ethereumdollar", JSON.stringify({"addrs": addrs, "pks": pks, "selectedAddr": selectedAddr}), 999);
+    Main.createCookie("EthereumDollar", JSON.stringify({"addrs": addrs, "pks": pks, "selectedAccount": selectedAccount}), 999);
     Main.connectionTest();
-    Main.loadAddresses(function(){
+    Main.loadAccounts(function(){
       Main.updatePrice(function(){
         Main.loadStats(function(){
           Main.displayEvents(function(){
             $('#loading').hide();
             refreshing = false;
-            last_refresh = Date.now();
+            lastRefresh = Date.now();
           });
         });
       });
@@ -316,50 +308,37 @@ Main.init = function() {
 }
 
 //globals
-var addrs = [config.eth_addr];
-var pks = [config.eth_addr_pk];
-var selectedAddr = 0;
-var cookie = Main.readCookie("user_ethereumdollar");
+var addrs = [config.ethAddr];
+var pks = [config.ethAddrPrivateKey];
+var selectedAccount = 0;
+var cookie = Main.readCookie("EthereumDollar");
 if (cookie) {
   cookie = JSON.parse(cookie);
   addrs = cookie["addrs"];
   pks = cookie["pks"];
-  selectedAddr = cookie["selectedAddr"];
+  selectedAccount = cookie["selectedAccount"];
 }
 var connection = undefined;
 var nonce = undefined;
-var events_cache = {};
+var eventsCache = {};
 var refreshing = false;
-var last_refresh = Date.now();
+var lastRefresh = Date.now();
 var price = undefined;
-var price_updated = Date.now();
-var contract_ethereumdollar = undefined;
-var contract_backertoken = undefined;
-var contract_dollartoken = undefined;
+var priceUpdated = Date.now();
+var contractEthereumDollar = undefined;
+var contractBackerToken = undefined;
+var contractDollarToken = undefined;
 //web3
 var web3 = new Web3();
-web3.eth.defaultAccount = config.eth_addr;
-web3.setProvider(new web3.providers.HttpProvider(config.eth_provider));
+web3.eth.defaultAccount = config.ethAddr;
+web3.setProvider(new web3.providers.HttpProvider(config.ethProvider));
 
-//get contracts
-function loadContract(source_code, address, callback) {
-  utility.readFile(source_code+'.bytecode', function(result){
-    utility.readFile(source_code+'.interface', function(result){
-      bytecode = JSON.parse(result);
-      abi = JSON.parse(result);
-      var contract = web3.eth.contract(abi);
-      contract = contract.at(address);
-      callback(contract, address);
-    });
-  });
-}
-
-loadContract(config.contract_ethereumdollar, config.contract_ethereumdollar_addr, function(contract, address){
-  contract_ethereumdollar = contract;
-  loadContract(config.contract_token, config.contract_backertoken_addr, function(contract, address){
-    contract_backertoken = contract;
-    loadContract(config.contract_token, config.contract_dollartoken_addr, function(contract, address){
-      contract_dollartoken = contract;
+utility.loadContract(web3, config.contractEthereumDollar, config.contractEthereumDollarAddr, function(err, contract){
+  contractEthereumDollar = contract;
+  utility.loadContract(web3, config.contractToken, config.contractBackerTokenAddr, function(contract, contract){
+    contractBackerToken = contract;
+    utility.loadContract(web3, config.contractToken, config.contractDollarTokenAddr, function(contract, contract){
+      contractDollarToken = contract;
       Main.init();
     });
   });

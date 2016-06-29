@@ -33,11 +33,30 @@
 
     <div id="page">
       <div id="content">
-        <div id="addresses">
-          <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            <i class="fa fa-circle-o-notch fa-spin"></i>
-          </button>
-        </div>
+        <nav class="navbar navbar-default">
+          <div class="container-fluid">
+            <!-- Brand and toggle get grouped for better mobile display -->
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+              <a class="navbar-brand" href="#">
+                <img src="/logo.png" style="height: 100%;" />
+              </a>
+            </div>
+
+            <!-- Collect the nav links, forms, and other content for toggling -->
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+              <ul class="nav navbar-nav navbar-right">
+                <li class="dropdown" id="addresses">
+                </li>
+              </ul>
+            </div><!-- /.navbar-collapse -->
+          </div><!-- /.container-fluid -->
+        </nav>
 
         <div class="row">
           <div class="col-xs-6">
@@ -46,7 +65,7 @@
             <ul class="list-group">
               <li class="list-group-item">
                 My Balance
-                <span class="badge"><span id="balance_backer">?</span> BKR</span>
+                <span class="badge"><span id="balanceBacker">?</span> BKR</span>
               </li>
               <li class="list-group-item">
                 <form class="form-inline">
@@ -96,7 +115,7 @@
             <ul class="list-group">
               <li class="list-group-item">
                 My Balance
-                <span class="badge"><span id="balance_dollar">?</span> EUSD</span>
+                <span class="badge"><span id="balanceDollar">?</span> EUSD</span>
               </li>
               <li class="list-group-item">
                 <form class="form-inline">
@@ -160,13 +179,13 @@
 
         <div class="box-container">
           <div id="stats">
-            <p><i class="fa fa-circle-o-notch fa-spin"></i></p>
+            <p style="margin-top: 17px;"><i class="fa fa-circle-o-notch fa-spin"></i></p>
           </div>
         </div>
 
         <div class="box-container">
           <div id="stats_contracts">
-            <p><i class="fa fa-circle-o-notch fa-spin"></i></p>
+            <p style="margin-top: 17px;"><i class="fa fa-circle-o-notch fa-spin"></i></p>
           </div>
         </div>
 
@@ -189,25 +208,25 @@
             There is a 1% fee charged for creation and redemption.
           </p>
           <p>
+            The Backer Rate is calculated with the following formula:
+            <pre>
+backerRate = (etherBalance - dollarTokenSupply / exchangeRate) / backerTokenSupply
+            </pre>
+          </p>
+          <p>
             Solvency is defined as EthereumDollar's Ether balance in dollar terms (at the current Exchange Rate) divided by the Dollar Token supply, or 1.0 if the Dollar Token supply is 0.
             The minimum solvency levels (to create Dollar Tokens, redeem Dollar Tokens, and redeem Backer Tokens) are listed above.
             When calculating whether solvency meets the minimum, the effect of the current creation or redemption is included.
+          </p>
+          <p>
+            If EthereumDollar is insolvent, then the first person to create Backer Tokens engages Savior Mode, and all Backer Token balances are cleared. In Savior Mode, every Ether sent to be turned into Backer Tokens is converted into 1 Backer Token plus the equivalent amount of Dollar Tokens. Savior Mode remains on for as long as EthereumDollar remains solvent.
           </p>
           <p>
             The Exchange Rate can be updated by calling updateExchangeRate().
             This will query Etherscan for the current ETH/USD price via Oraclize.
             If the Exchange Rate is out of date and too low, then Backer Token holders will want to update it.
             If the Exchange Rate is out of date and too high, then Dollar Token holders will want to update it.
-            Hence, the Exchange Rate should stay up to date.
-          </p>
-          <p>
-            The Backer Rate is calculated with the following formula:
-            <pre>
-  if solvency>=1.0 then
-      backerRate = (etherBalance - dollarTokenSupply / exchangeRate) / backerTokenSupply
-  else
-      backerRate = 0.000001
-            </pre>
+            Hence, the Exchange Rate will stay up to date.
           </p>
         </div>
 

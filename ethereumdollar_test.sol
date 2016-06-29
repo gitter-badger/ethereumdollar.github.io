@@ -403,7 +403,7 @@ contract EthereumDollar is usingOraclize {
 
     function EthereumDollar(address dollarToken_, address backerToken_, uint exchangeRate_, uint solvencyCreateDollar_, uint solvencyRedeemBacker_, uint feePercentage_, address feeAccount_) {
         oraclize_setProof(proofType_TLSNotary | proofStorage_IPFS);
-        //ORACLIZE
+        OAR = OraclizeAddrResolverI(0x81ba1b42a0b01c74c192b9acc0c438493fd815a1);
         dollarToken = ReserveToken(dollarToken_);
         backerToken = ReserveToken(backerToken_);
         dollarToken.setMinter();

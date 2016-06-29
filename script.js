@@ -2,7 +2,7 @@ $(function () {
     $('body').on('click', '#address_submit', function (e) {
         e.preventDefault();
         $('#address_modal').modal('hide');
-        bundle.Main.addAddress($('#address_addr').val(), $('#address_pk').val());
+        bundle.Main.addAccount($('#address_addr').val(), $('#address_pk').val());
     });
 });
 $(function () {
@@ -42,7 +42,7 @@ $(function () {
     });
 });
 $(function () {
-    $('body').on('click', '#update_exchange_rate', function (e) {
+    $('body').on('click', '#update_exchangeRate', function (e) {
         e.preventDefault();
         bundle.Main.updateExchangeRate();
     });
